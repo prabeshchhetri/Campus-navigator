@@ -1,39 +1,34 @@
 // Canvas
 const canvas = document.getElementById("renderCanvas");
 
-// Babylon engine
+// Engine
 const engine = new BABYLON.Engine(canvas, true);
 
-// Create scene
+// Scene
 const createScene = async function () {
 
 const scene = new BABYLON.Scene(engine);
 
-
 /* CAMERA */
 const camera = new BABYLON.ArcRotateCamera(
 "camera",
--Math.PI / 2,
-Math.PI / 2.5,
+-Math.PI/2,
+Math.PI/2.5,
 5,
 new BABYLON.Vector3(0,1,0),
 scene
 );
 
-camera.attachControl(canvas, true);
+camera.attachControl(canvas,true);
 
-
-/* LIGHTING */
+/* LIGHT */
 const light = new BABYLON.HemisphericLight(
 "light",
 new BABYLON.Vector3(0,1,0),
 scene
 );
 
-light.intensity = 0.8;
-
-
-/* TEST OBJECT (Navigation Arrow) */
+/* TEST ARROW */
 
 const arrow = BABYLON.MeshBuilder.CreateCylinder(
 "arrow",
@@ -41,7 +36,6 @@ const arrow = BABYLON.MeshBuilder.CreateCylinder(
 scene
 );
 
-arrow.position.z = -2;
 arrow.position.y = 0.5;
 
 const arrowMat = new BABYLON.StandardMaterial("arrowMat",scene);
@@ -49,7 +43,7 @@ arrowMat.diffuseColor = new BABYLON.Color3(1,0,0);
 arrow.material = arrowMat;
 
 
-/* ENABLE WEBXR */
+/* WEBXR SETUP */
 
 const xr = await scene.createDefaultXRExperienceAsync({
 uiOptions:{
@@ -61,7 +55,7 @@ referenceSpaceType:"local-floor"
 const fm = xr.baseExperience.featuresManager;
 
 
-/* HIT TEST */
+/* HIT TEST FEATURE */
 
 const hitTest = fm.enableFeature(
 BABYLON.WebXRHitTest.Name,
@@ -69,7 +63,7 @@ BABYLON.WebXRHitTest.Name,
 );
 
 
-/* MARKER */
+/* MARKER FOR DETECTED SURFACE */
 
 const marker = BABYLON.MeshBuilder.CreateTorus(
 "marker",
@@ -137,7 +131,7 @@ anchor.attachedNode = box;
 });
 
 
-/* FUNCTION TO CREATE RANDOM BOX */
+/* FUNCTION CREATE BOX */
 
 function buildRandomBox(){
 
@@ -164,13 +158,11 @@ return box;
 
 }
 
-
 return scene;
-
 };
 
 
-// Run scene
+// RUN SCENE
 createScene().then((scene)=>{
 
 engine.runRenderLoop(function(){
