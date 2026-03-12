@@ -8,6 +8,7 @@ const engine = new BABYLON.Engine(canvas, true);
 const createScene = async function () {
 
 const scene = new BABYLON.Scene(engine);
+scene.clearColor = new BABYLON.Color4(0,0,0,0);
 
 /* CAMERA */
 const camera = new BABYLON.ArcRotateCamera(
