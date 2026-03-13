@@ -1,11 +1,11 @@
-// Canvas
+// CANVAS
 const canvas = document.getElementById("renderCanvas");
 
-// Engine
-const engine = new BABYLON.Engine(canvas, true);
+// ENGINE
+const engine = new BABYLON.Engine(canvas,true);
 
-// Scene
-const createScene = async function () {
+// SCENE
+const createScene = async function(){
 
 const scene = new BABYLON.Scene(engine);
 scene.clearColor = new BABYLON.Color4(0,0,0,0);
@@ -28,6 +28,7 @@ const light = new BABYLON.HemisphericLight(
 new BABYLON.Vector3(0,1,0),
 scene
 );
+light.intensity = 0.9;
 
 /* TEST ARROW */
 
@@ -37,7 +38,8 @@ const arrow = BABYLON.MeshBuilder.CreateCylinder(
 scene
 );
 
-arrow.position.y = 0.5;
+arrow.position.y = 1;
+arrow.position.z = -1;
 
 const arrowMat = new BABYLON.StandardMaterial("arrowMat",scene);
 arrowMat.diffuseColor = new BABYLON.Color3(1,0,0);
@@ -50,13 +52,16 @@ const xr = await scene.createDefaultXRExperienceAsync({
 uiOptions:{
 sessionMode:"immersive-ar",
 referenceSpaceType:"local-floor"
-}
+},
+
+optionalFeatures:true
+
 });
 
 const fm = xr.baseExperience.featuresManager;
 
 
-/* HIT TEST FEATURE */
+/* HIT TEST */
 
 const hitTest = fm.enableFeature(
 BABYLON.WebXRHitTest.Name,
@@ -64,7 +69,7 @@ BABYLON.WebXRHitTest.Name,
 );
 
 
-/* MARKER FOR DETECTED SURFACE */
+/* MARKER */
 
 const marker = BABYLON.MeshBuilder.CreateTorus(
 "marker",
@@ -72,42 +77,42 @@ const marker = BABYLON.MeshBuilder.CreateTorus(
 scene
 );
 
-marker.isVisible = false;
+marker.isVisible=false;
 
 const markerMat = new BABYLON.StandardMaterial("markerMat",scene);
 markerMat.diffuseColor = new BABYLON.Color3(0,1,0);
 marker.material = markerMat;
 
 
-/* HIT TEST RESULTS */
+/* HIT TEST RESULT */
 
-let latestHit = null;
+let latestHit=null;
 
 hitTest.onHitTestResultObservable.add((results)=>{
 
 if(results.length){
 
-const hit = results[0];
-latestHit = hit;
+const hit=results[0];
+latestHit=hit;
 
-marker.isVisible = true;
+marker.isVisible=true;
 
-const mat = hit.transformationMatrix;
+const mat=hit.transformationMatrix;
 
-marker.position.x = mat.m[12];
-marker.position.y = mat.m[13];
-marker.position.z = mat.m[14];
+marker.position.x=mat.m[12];
+marker.position.y=mat.m[13];
+marker.position.z=mat.m[14];
 
 }else{
 
-marker.isVisible = false;
+marker.isVisible=false;
 
 }
 
 });
 
 
-/* ANCHOR SYSTEM */
+/* ANCHORS */
 
 const anchorSystem = fm.enableFeature(
 BABYLON.WebXRAnchorSystem.Name,
@@ -115,9 +120,9 @@ BABYLON.WebXRAnchorSystem.Name,
 );
 
 
-/* TAP TO PLACE OBJECT */
 
-window.addEventListener("click", async ()=>{
+
+window.addEventListener("click",async()=>{
 
 if(latestHit){
 
@@ -138,11 +143,11 @@ function buildRandomBox(){
 
 const box = BABYLON.MeshBuilder.CreateBox(
 "box",
-{size:0.1},
+{size:0.15},
 scene
 );
 
-box.position.y = 0.05;
+box.position.y=0.075;
 box.bakeCurrentTransformIntoVertices();
 
 const mat = new BABYLON.StandardMaterial("boxMat",scene);
