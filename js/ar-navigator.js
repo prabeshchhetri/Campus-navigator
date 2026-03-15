@@ -18,9 +18,10 @@ scene
 
 camera.attachControl(canvas,true);
 
+
 /* LIGHT */
 
-const light = new BABYLON.HemisphericLight(
+new BABYLON.HemisphericLight(
 "light",
 new BABYLON.Vector3(0,1,0),
 scene
@@ -53,20 +54,20 @@ BABYLON.WebXRHitTest.Name,
 
 const marker = BABYLON.MeshBuilder.CreateTorus(
 "marker",
-{diameter:0.2, thickness:0.02},
+{diameter:0.25, thickness:0.03},
 scene
 );
 
 marker.isVisible=false;
 
-const markerMat = new BABYLON.StandardMaterial("mat",scene);
+const markerMat = new BABYLON.StandardMaterial("markerMat",scene);
 markerMat.diffuseColor = new BABYLON.Color3(0,1,0);
 marker.material = markerMat;
 
 
-/* HIT RESULT STORAGE */
+/* STORE HIT RESULT */
 
-let latestHit=null;
+let latestHit = null;
 
 hitTest.onHitTestResultObservable.add((results)=>{
 
@@ -100,7 +101,7 @@ BABYLON.WebXRAnchorSystem.Name,
 );
 
 
-/* TAP TO PLACE ARROW PATH */
+/* TAP TO PLACE PATH */
 
 window.addEventListener("click", async ()=>{
 
@@ -108,37 +109,34 @@ if(!latestHit) return;
 
 const anchor = await anchorSystem.addAnchorPointUsingHitTestResultAsync(latestHit);
 
-/* CREATE NAVIGATION PATH */
-
-const path = createArrowPath(scene);
+const path = createNavigationPath(scene);
 
 anchor.attachedNode = path;
 
 });
 
 
-/* ARROW PATH FUNCTION */
+/* NAVIGATION PATH */
 
-function createArrowPath(scene){
+function createNavigationPath(scene){
 
 const parent = new BABYLON.TransformNode("path");
+
+
+/* ARROWS */
 
 for(let i=0;i<5;i++){
 
 const arrow = BABYLON.MeshBuilder.CreateCylinder(
 "arrow",
-{
-diameterTop:0,
-diameterBottom:0.2,
-height:0.4
-},
+{diameterTop:0, diameterBottom:0.3, height:0.5},
 scene
 );
 
-arrow.position.z = i * 0.6;
-arrow.position.y = 0.2;
-
 arrow.rotation.x = Math.PI/2;
+
+arrow.position.z = i * 0.8;
+arrow.position.y = 0.25;
 
 const mat = new BABYLON.StandardMaterial("arrowMat",scene);
 mat.diffuseColor = new BABYLON.Color3(1,0,0);
@@ -149,16 +147,17 @@ arrow.parent = parent;
 
 }
 
-/* DESTINATION BOX */
+
+/* DESTINATION */
 
 const dest = BABYLON.MeshBuilder.CreateBox(
 "destination",
-{size:0.3},
+{size:0.4},
 scene
 );
 
-dest.position.z = 3.5;
-dest.position.y = 0.15;
+dest.position.z = 4;
+dest.position.y = 0.2;
 
 const destMat = new BABYLON.StandardMaterial("destMat",scene);
 destMat.diffuseColor = new BABYLON.Color3(0,0,1);
@@ -166,6 +165,42 @@ destMat.diffuseColor = new BABYLON.Color3(0,0,1);
 dest.material = destMat;
 
 dest.parent = parent;
+
+
+/* DESTINATION TEXT */
+
+const plane = BABYLON.MeshBuilder.CreatePlane(
+"textPlane",
+{size:1},
+scene
+);
+
+plane.position.z = 4;
+plane.position.y = 1;
+
+plane.parent = parent;
+
+const texture = new BABYLON.DynamicTexture(
+"texture",
+512,
+scene,
+true
+);
+
+texture.drawText(
+"ROOM 101",
+100,
+250,
+"bold 70px Arial",
+"white",
+"transparent",
+true
+);
+
+const mat = new BABYLON.StandardMaterial("textMat",scene);
+mat.diffuseTexture = texture;
+
+plane.material = mat;
 
 return parent;
 
@@ -178,12 +213,16 @@ return scene;
 
 createScene().then((scene)=>{
 
-engine.runRenderLoop(function(){
+engine.runRenderLoop(()=>{
+
 scene.render();
+
 });
 
-window.addEventListener("resize",function(){
+window.addEventListener("resize",()=>{
+
 engine.resize();
+
 });
 
 });

@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
 
 <meta charset="UTF-8">
@@ -8,19 +9,32 @@
 <title>Campus Navigator AR</title>
 
 <style>
-html, body{
-overflow:hidden;
-width:100%;
-height:100%;
-margin:0;
-padding:0;
+
+html, body {
+    overflow: hidden;
+    width:100%;
+    height:100%;
+    margin:0;
+    padding:0;
 }
 
-#renderCanvas{
-width:100%;
-height:100%;
-touch-action:none;
+#renderCanvas {
+    width:100%;
+    height:100%;
+    touch-action:none;
 }
+
+#info {
+position:absolute;
+top:20px;
+left:20px;
+color:white;
+background:black;
+padding:10px;
+font-family:Arial;
+z-index:10;
+}
+
 </style>
 
 <script src="https://cdn.babylonjs.com/babylon.js"></script>
@@ -32,6 +46,10 @@ touch-action:none;
 </head>
 
 <body>
+
+<div id="info">
+Scan the floor and tap to place navigation path
+</div>
 
 <canvas id="renderCanvas"></canvas>
 
