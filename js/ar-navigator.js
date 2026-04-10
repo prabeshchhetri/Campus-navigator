@@ -57,19 +57,19 @@ const createScene = async function () {
     makeButton("room101", "Room 101", "16px", "90px", () => {
         selectedRoom = "ROOM 101";
         document.getElementById("info").textContent =
-            "Room 101 selected. Scan the floor, then tap once to place the path.";
+            "Room 101 selected. Scan the floor, then trigger/tap to place the path.";
     });
 
     makeButton("room102", "Room 102", "16px", "145px", () => {
         selectedRoom = "ROOM 102";
         document.getElementById("info").textContent =
-            "Room 102 selected. Scan the floor, then tap once to place the path.";
+            "Room 102 selected. Scan the floor, then trigger/tap to place the path.";
     });
 
     makeButton("office", "Office", "16px", "200px", () => {
         selectedRoom = "OFFICE";
         document.getElementById("info").textContent =
-            "Office selected. Scan the floor, then tap once to place the path.";
+            "Office selected. Scan the floor, then trigger/tap to place the path.";
     });
 
     makeButton("reset", "Reset", "16px", "255px", () => {
@@ -83,8 +83,10 @@ const createScene = async function () {
         }
         currentAnchor = null;
 
+        marker.isVisible = true;
+
         document.getElementById("info").textContent =
-            "Path cleared. Select a room, scan the floor, then tap once to place the navigation path.";
+            "Path cleared. Select a room, scan the floor, then trigger/tap to place the path.";
     });
 
     // WEBXR
@@ -139,11 +141,10 @@ const createScene = async function () {
         }
     });
 
-    // PLACE PATH
-    canvas.addEventListener("pointerdown", async () => {
+    async function placePath() {
         if (!latestHit) {
             document.getElementById("info").textContent =
-                "No surface detected yet. Move the device slowly and scan the floor.";
+                "No surface detected yet. Move slowly and keep looking at the floor.";
             return;
         }
 
@@ -157,19 +158,26 @@ const createScene = async function () {
         }
         currentAnchor = null;
 
-      try {
-    currentAnchor = await anchorSystem.addAnchorPointUsingHitTestResultAsync(latestHit);
-    currentPath = createNavigationPath(scene, selectedRoom);
-    currentAnchor.attachedNode = currentPath;
-    marker.isVisible = false;
+        try {
+            currentAnchor = await anchorSystem.addAnchorPointUsingHitTestResultAsync(latestHit);
+            currentPath = createNavigationPath(scene, selectedRoom);
+            currentAnchor.attachedNode = currentPath;
+            marker.isVisible = false;
 
-    document.getElementById("info").textContent =
-        `${selectedRoom} path placed. Follow the arrows to the destination.`;
-} catch (error) {
-    console.error("Anchor placement failed:", error);
-    document.getElementById("info").textContent =
-        "Could not place the path. Try scanning the floor again.";
-}
+            document.getElementById("info").textContent =
+                `${selectedRoom} path placed. Follow the arrows to the destination.`;
+        } catch (error) {
+            console.error("Anchor placement failed:", error);
+            document.getElementById("info").textContent =
+                "Could not place the path. Try scanning the floor again.";
+        }
+    }
+
+    // POINTER / TRIGGER INPUT
+    scene.onPointerObservable.add((pointerInfo) => {
+        if (pointerInfo.type === BABYLON.PointerEventTypes.POINTERDOWN) {
+            placePath();
+        }
     });
 
     // NAVIGATION PATH
