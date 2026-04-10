@@ -1,57 +1,52 @@
 <!DOCTYPE html>
 <html lang="en">
-
 <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Campus Navigator AR</title>
 
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <style>
+        html, body {
+            overflow: hidden;
+            width: 100%;
+            height: 100%;
+            margin: 0;
+            padding: 0;
+            font-family: Arial, sans-serif;
+        }
 
-<title>Campus Navigator AR</title>
+        #renderCanvas {
+            width: 100%;
+            height: 100%;
+            touch-action: none;
+        }
 
-<style>
+        #info {
+            position: absolute;
+            top: 16px;
+            left: 16px;
+            color: white;
+            background: rgba(0, 0, 0, 0.75);
+            padding: 10px 14px;
+            border-radius: 8px;
+            z-index: 10;
+            max-width: 320px;
+            line-height: 1.4;
+            font-size: 14px;
+        }
+    </style>
 
-html, body {
-    overflow: hidden;
-    width:100%;
-    height:100%;
-    margin:0;
-    padding:0;
-}
-
-#renderCanvas {
-    width:100%;
-    height:100%;
-    touch-action:none;
-}
-
-#info {
-position:absolute;
-top:20px;
-left:20px;
-color:white;
-background:black;
-padding:10px;
-font-family:Arial;
-z-index:10;
-}
-
-</style>
-
-<script src="https://cdn.babylonjs.com/babylon.js"></script>
-<script src="https://cdn.babylonjs.com/loaders/babylonjs.loaders.min.js"></script>
-<script src="https://code.jquery.com/pep/0.4.3/pep.js"></script>
-
-<script src="js/ar-navigator.js" defer></script>
-
+    <script src="https://cdn.babylonjs.com/babylon.js"></script>
+    <script src="https://cdn.babylonjs.com/loaders/babylonjs.loaders.min.js"></script>
+    <script src="https://cdn.babylonjs.com/gui/babylon.gui.min.js"></script>
+    <script src="https://code.jquery.com/pep/0.4.3/pep.js"></script>
+    <script src="js/ar-navigator.js" defer></script>
 </head>
-
 <body>
+    <div id="info">
+        Select a room, scan the floor, then tap once to place the navigation path.
+    </div>
 
-<div id="info">
-Scan the floor and tap to place navigation path
-</div>
-
-<canvas id="renderCanvas"></canvas>
-
+    <canvas id="renderCanvas" touch-action="none"></canvas>
 </body>
 </html>
