@@ -32,6 +32,8 @@ const createScene = async function () {
     let selectedRoom = "ROOM 101";
     let currentPath = null;
     let currentAnchor = null;
+    let pathPlaced = false;
+    let autoPlacePending = false;
 
     /* GUI */
     const ui = BABYLON.GUI.AdvancedDynamicTexture.CreateFullscreenUI("ui", true, scene);
@@ -54,29 +56,11 @@ const createScene = async function () {
         return button;
     }
 
-    makeButton("room101", "Room 101", "16px", "90px", () => {
-        selectedRoom = "ROOM 101";
-        document.getElementById("info").textContent =
-            "Room 101 selected. Scan the floor until the green ring appears, then press Place Path.";
-    });
+    function selectRoom(roomName) {
+        selectedRoom = roomName;
+        pathPlaced = false;
+        autoPlacePending = true;
 
-    makeButton("room102", "Room 102", "16px", "145px", () => {
-        selectedRoom = "ROOM 102";
-        document.getElementById("info").textContent =
-            "Room 102 selected. Scan the floor until the green ring appears, then press Place Path.";
-    });
-
-    makeButton("office", "Office", "16px", "200px", () => {
-        selectedRoom = "OFFICE";
-        document.getElementById("info").textContent =
-            "Office selected. Scan the floor until the green ring appears, then press Place Path.";
-    });
-
-    makeButton("placePath", "Place Path", "16px", "255px", async () => {
-        await placePath();
-    }, "150px");
-
-    makeButton("reset", "Reset", "16px", "310px", () => {
         if (currentPath) {
             currentPath.dispose(false, true);
             currentPath = null;
@@ -87,10 +71,40 @@ const createScene = async function () {
         }
         currentAnchor = null;
 
-        marker.isVisible = true;
+        document.getElementById("info").textContent =
+            `${roomName} selected. Enter AR and scan the floor until the green ring appears. The path will be placed automatically.`;
+    }
+
+    makeButton("room101", "Room 101", "16px", "90px", () => {
+        selectRoom("ROOM 101");
+    });
+
+    makeButton("room102", "Room 102", "16px", "145px", () => {
+        selectRoom("ROOM 102");
+    });
+
+    makeButton("office", "Office", "16px", "200px", () => {
+        selectRoom("OFFICE");
+    });
+
+    makeButton("reset", "Reset", "16px", "255px", () => {
+        if (currentPath) {
+            currentPath.dispose(false, true);
+            currentPath = null;
+        }
+
+        if (currentAnchor && typeof currentAnchor.remove === "function") {
+            currentAnchor.remove();
+        }
+        currentAnchor = null;
+
+        latestHit = null;
+        pathPlaced = false;
+        autoPlacePending = false;
+        marker.isVisible = false;
 
         document.getElementById("info").textContent =
-            "Path cleared. Select a room, scan the floor, then press Place Path.";
+            "Path cleared. Select a room, enter AR, and scan the floor until the green ring appears.";
     });
 
     /* WEBXR */
@@ -129,7 +143,7 @@ const createScene = async function () {
     markerMat.emissiveColor = new BABYLON.Color3(0, 0.6, 0);
     marker.material = markerMat;
 
-    hitTest.onHitTestResultObservable.add((results) => {
+    hitTest.onHitTestResultObservable.add(async (results) => {
         if (results.length > 0) {
             const hit = results[0];
             latestHit = hit;
@@ -139,46 +153,51 @@ const createScene = async function () {
             marker.position.x = mat.m[12];
             marker.position.y = mat.m[13];
             marker.position.z = mat.m[14];
+
+            if (!pathPlaced && autoPlacePending) {
+                await placePathAutomatically();
+            }
         } else {
             latestHit = null;
-            marker.isVisible = false;
+            if (!pathPlaced) {
+                marker.isVisible = false;
+            }
         }
     });
 
-    /* PLACE PATH FUNCTION */
-    async function placePath() {
-        if (!latestHit) {
-            document.getElementById("info").textContent =
-                "No floor detected yet. Move slowly and keep looking at the floor until the green ring appears.";
-            return;
-        }
-
-        if (currentPath) {
-            currentPath.dispose(false, true);
-            currentPath = null;
-        }
-
-        if (currentAnchor && typeof currentAnchor.remove === "function") {
-            currentAnchor.remove();
-        }
-        currentAnchor = null;
+    async function placePathAutomatically() {
+        if (!latestHit || pathPlaced) return;
 
         try {
+            autoPlacePending = false;
+
+            if (currentPath) {
+                currentPath.dispose(false, true);
+                currentPath = null;
+            }
+
+            if (currentAnchor && typeof currentAnchor.remove === "function") {
+                currentAnchor.remove();
+            }
+            currentAnchor = null;
+
             currentAnchor = await anchorSystem.addAnchorPointUsingHitTestResultAsync(latestHit);
             currentPath = createNavigationPath(scene, selectedRoom);
             currentAnchor.attachedNode = currentPath;
+
+            pathPlaced = true;
             marker.isVisible = false;
 
             document.getElementById("info").textContent =
-                `${selectedRoom} path placed. Follow the arrows to the destination.`;
+                `${selectedRoom} path placed automatically. Follow the arrows to the destination.`;
         } catch (error) {
-            console.error("Anchor placement failed:", error);
+            console.error("Automatic path placement failed:", error);
+            autoPlacePending = true;
             document.getElementById("info").textContent =
-                "Could not place the path. Try scanning the floor again.";
+                "Could not place the path yet. Keep scanning the floor slowly.";
         }
     }
 
-    /* PATH CREATION */
     function createNavigationPath(scene, roomName) {
         const parent = new BABYLON.TransformNode("path", scene);
 
@@ -258,7 +277,6 @@ const createScene = async function () {
         createRoomLabel(roomName, parent, currentPosition);
     }
 
-    /* ROOM LABEL */
     function createRoomLabel(text, parent, pos) {
         const plane = BABYLON.MeshBuilder.CreatePlane(
             "textPlane",
