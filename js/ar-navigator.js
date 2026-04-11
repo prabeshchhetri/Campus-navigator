@@ -5,7 +5,7 @@ const createScene = async function () {
     const scene = new BABYLON.Scene(engine);
     scene.clearColor = new BABYLON.Color4(0, 0, 0, 0);
 
-    /* CAMERA */
+    // CAMERA
     const camera = new BABYLON.ArcRotateCamera(
         "camera",
         -Math.PI / 2,
@@ -16,7 +16,7 @@ const createScene = async function () {
     );
     camera.attachControl(canvas, true);
 
-    /* LIGHT */
+    // LIGHT
     const light = new BABYLON.HemisphericLight(
         "light",
         new BABYLON.Vector3(0, 1, 0),
@@ -27,20 +27,19 @@ const createScene = async function () {
     const glow = new BABYLON.GlowLayer("glow", scene);
     glow.intensity = 0.6;
 
-    /* STATE */
+    // STATE
     let latestHit = null;
     let selectedRoom = "ROOM 101";
     let currentPath = null;
-    let currentAnchor = null;
     let pathPlaced = false;
     let autoPlacePending = false;
 
-    /* GUI */
+    // GUI
     const ui = BABYLON.GUI.AdvancedDynamicTexture.CreateFullscreenUI("ui", true, scene);
 
-    function makeButton(name, text, left, top, onClick, width = "140px") {
+    function makeButton(name, text, left, top, onClick) {
         const button = BABYLON.GUI.Button.CreateSimpleButton(name, text);
-        button.width = width;
+        button.width = "140px";
         button.height = "45px";
         button.color = "white";
         button.background = "black";
@@ -66,10 +65,7 @@ const createScene = async function () {
             currentPath = null;
         }
 
-        if (currentAnchor && typeof currentAnchor.remove === "function") {
-            currentAnchor.remove();
-        }
-        currentAnchor = null;
+        marker.isVisible = false;
 
         document.getElementById("info").textContent =
             `${roomName} selected. Enter AR and scan the floor until the green ring appears. The path will be placed automatically.`;
@@ -93,11 +89,6 @@ const createScene = async function () {
             currentPath = null;
         }
 
-        if (currentAnchor && typeof currentAnchor.remove === "function") {
-            currentAnchor.remove();
-        }
-        currentAnchor = null;
-
         latestHit = null;
         pathPlaced = false;
         autoPlacePending = false;
@@ -107,7 +98,7 @@ const createScene = async function () {
             "Path cleared. Select a room, enter AR, and scan the floor until the green ring appears.";
     });
 
-    /* WEBXR */
+    // WEBXR
     const xr = await scene.createDefaultXRExperienceAsync({
         uiOptions: {
             sessionMode: "immersive-ar",
@@ -118,19 +109,13 @@ const createScene = async function () {
 
     const fm = xr.baseExperience.featuresManager;
 
-    /* HIT TEST */
+    // HIT TEST
     const hitTest = fm.enableFeature(
         BABYLON.WebXRHitTest.Name,
         "latest"
     );
 
-    /* ANCHORS */
-    const anchorSystem = fm.enableFeature(
-        BABYLON.WebXRAnchorSystem.Name,
-        "latest"
-    );
-
-    /* SURFACE MARKER */
+    // SURFACE MARKER
     const marker = BABYLON.MeshBuilder.CreateTorus(
         "marker",
         { diameter: 0.25, thickness: 0.03 },
@@ -147,11 +132,12 @@ const createScene = async function () {
         if (results.length > 0) {
             const hit = results[0];
             latestHit = hit;
-            marker.isVisible = true;
 
             const mat = hit.transformationMatrix;
+
+            marker.isVisible = true;
             marker.position.x = mat.m[12];
-            marker.position.y = mat.m[13];
+            marker.position.y = mat.m[13] + 0.01;
             marker.position.z = mat.m[14];
 
             if (!pathPlaced && autoPlacePending) {
@@ -176,14 +162,18 @@ const createScene = async function () {
                 currentPath = null;
             }
 
-            if (currentAnchor && typeof currentAnchor.remove === "function") {
-                currentAnchor.remove();
-            }
-            currentAnchor = null;
+            const mat = latestHit.transformationMatrix;
 
-            currentAnchor = await anchorSystem.addAnchorPointUsingHitTestResultAsync(latestHit);
             currentPath = createNavigationPath(scene, selectedRoom);
-            currentAnchor.attachedNode = currentPath;
+
+            currentPath.position = new BABYLON.Vector3(
+                mat.m[12],
+                mat.m[13],
+                mat.m[14]
+            );
+
+            currentPath.rotation = BABYLON.Vector3.Zero();
+            currentPath.scaling = new BABYLON.Vector3(1, 1, 1);
 
             pathPlaced = true;
             marker.isVisible = false;
@@ -248,7 +238,6 @@ const createScene = async function () {
             arrowMat.diffuseColor = new BABYLON.Color3(1, 0, 0);
             arrowMat.emissiveColor = new BABYLON.Color3(0.5, 0, 0);
             arrow.material = arrowMat;
-
             arrow.parent = parent;
 
             const direction = new BABYLON.Vector3(
