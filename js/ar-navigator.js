@@ -5,7 +5,7 @@ const createScene = async function () {
     const scene = new BABYLON.Scene(engine);
     scene.clearColor = new BABYLON.Color4(0, 0, 0, 0);
 
-    // CAMERA
+    /* CAMERA */
     const camera = new BABYLON.ArcRotateCamera(
         "camera",
         -Math.PI / 2,
@@ -16,7 +16,7 @@ const createScene = async function () {
     );
     camera.attachControl(canvas, true);
 
-    // LIGHT
+    /* LIGHT */
     const light = new BABYLON.HemisphericLight(
         "light",
         new BABYLON.Vector3(0, 1, 0),
@@ -27,22 +27,22 @@ const createScene = async function () {
     const glow = new BABYLON.GlowLayer("glow", scene);
     glow.intensity = 0.6;
 
-    // STATE
+    /* STATE */
     let latestHit = null;
     let selectedRoom = "ROOM 101";
     let currentPath = null;
     let currentAnchor = null;
 
-    // GUI
+    /* GUI */
     const ui = BABYLON.GUI.AdvancedDynamicTexture.CreateFullscreenUI("ui", true, scene);
 
-    function makeButton(name, text, left, top, onClick) {
+    function makeButton(name, text, left, top, onClick, width = "140px") {
         const button = BABYLON.GUI.Button.CreateSimpleButton(name, text);
-        button.width = "140px";
+        button.width = width;
         button.height = "45px";
         button.color = "white";
         button.background = "black";
-        button.alpha = 0.8;
+        button.alpha = 0.85;
         button.cornerRadius = 10;
         button.thickness = 1;
         button.left = left;
@@ -57,22 +57,26 @@ const createScene = async function () {
     makeButton("room101", "Room 101", "16px", "90px", () => {
         selectedRoom = "ROOM 101";
         document.getElementById("info").textContent =
-            "Room 101 selected. Scan the floor, then trigger/tap to place the path.";
+            "Room 101 selected. Scan the floor until the green ring appears, then press Place Path.";
     });
 
     makeButton("room102", "Room 102", "16px", "145px", () => {
         selectedRoom = "ROOM 102";
         document.getElementById("info").textContent =
-            "Room 102 selected. Scan the floor, then trigger/tap to place the path.";
+            "Room 102 selected. Scan the floor until the green ring appears, then press Place Path.";
     });
 
     makeButton("office", "Office", "16px", "200px", () => {
         selectedRoom = "OFFICE";
         document.getElementById("info").textContent =
-            "Office selected. Scan the floor, then trigger/tap to place the path.";
+            "Office selected. Scan the floor until the green ring appears, then press Place Path.";
     });
 
-    makeButton("reset", "Reset", "16px", "255px", () => {
+    makeButton("placePath", "Place Path", "16px", "255px", async () => {
+        await placePath();
+    }, "150px");
+
+    makeButton("reset", "Reset", "16px", "310px", () => {
         if (currentPath) {
             currentPath.dispose(false, true);
             currentPath = null;
@@ -86,10 +90,10 @@ const createScene = async function () {
         marker.isVisible = true;
 
         document.getElementById("info").textContent =
-            "Path cleared. Select a room, scan the floor, then trigger/tap to place the path.";
+            "Path cleared. Select a room, scan the floor, then press Place Path.";
     });
 
-    // WEBXR
+    /* WEBXR */
     const xr = await scene.createDefaultXRExperienceAsync({
         uiOptions: {
             sessionMode: "immersive-ar",
@@ -100,19 +104,19 @@ const createScene = async function () {
 
     const fm = xr.baseExperience.featuresManager;
 
-    // HIT TEST
+    /* HIT TEST */
     const hitTest = fm.enableFeature(
         BABYLON.WebXRHitTest.Name,
         "latest"
     );
 
-    // ANCHORS
+    /* ANCHORS */
     const anchorSystem = fm.enableFeature(
         BABYLON.WebXRAnchorSystem.Name,
         "latest"
     );
 
-    // SURFACE MARKER
+    /* SURFACE MARKER */
     const marker = BABYLON.MeshBuilder.CreateTorus(
         "marker",
         { diameter: 0.25, thickness: 0.03 },
@@ -122,7 +126,7 @@ const createScene = async function () {
 
     const markerMat = new BABYLON.StandardMaterial("markerMat", scene);
     markerMat.diffuseColor = new BABYLON.Color3(0, 1, 0);
-    markerMat.emissiveColor = new BABYLON.Color3(0, 0.5, 0);
+    markerMat.emissiveColor = new BABYLON.Color3(0, 0.6, 0);
     marker.material = markerMat;
 
     hitTest.onHitTestResultObservable.add((results) => {
@@ -141,10 +145,11 @@ const createScene = async function () {
         }
     });
 
+    /* PLACE PATH FUNCTION */
     async function placePath() {
         if (!latestHit) {
             document.getElementById("info").textContent =
-                "No surface detected yet. Move slowly and keep looking at the floor.";
+                "No floor detected yet. Move slowly and keep looking at the floor until the green ring appears.";
             return;
         }
 
@@ -173,21 +178,38 @@ const createScene = async function () {
         }
     }
 
-    // POINTER / TRIGGER INPUT
-    scene.onPointerObservable.add((pointerInfo) => {
-        if (pointerInfo.type === BABYLON.PointerEventTypes.POINTERDOWN) {
-            placePath();
-        }
-    });
-
-    // NAVIGATION PATH
+    /* PATH CREATION */
     function createNavigationPath(scene, roomName) {
         const parent = new BABYLON.TransformNode("path", scene);
 
-        const arrowCount = 5;
-        const spacing = 0.8;
+        let routeSteps = [];
 
-        for (let i = 0; i < arrowCount; i++) {
+        if (roomName === "ROOM 101") {
+            routeSteps = ["forward", "forward", "forward", "forward", "forward"];
+        } else if (roomName === "ROOM 102") {
+            routeSteps = ["forward", "forward", "left", "forward", "forward"];
+        } else if (roomName === "OFFICE") {
+            routeSteps = ["forward", "forward", "right", "forward", "forward"];
+        }
+
+        buildPathFromSteps(parent, routeSteps, scene, roomName);
+        return parent;
+    }
+
+    function buildPathFromSteps(parent, steps, scene, roomName) {
+        let currentPosition = new BABYLON.Vector3(0, 0.2, 0);
+        let currentRotationY = 0;
+        const stepDistance = 0.8;
+
+        for (let i = 0; i < steps.length; i++) {
+            const step = steps[i];
+
+            if (step === "left") {
+                currentRotationY -= Math.PI / 2;
+            } else if (step === "right") {
+                currentRotationY += Math.PI / 2;
+            }
+
             const arrow = BABYLON.MeshBuilder.CreateCylinder(
                 `arrow-${i}`,
                 {
@@ -200,15 +222,23 @@ const createScene = async function () {
             );
 
             arrow.rotation.x = Math.PI / 2;
-            arrow.position.z = i * spacing;
-            arrow.position.y = 0.2;
+            arrow.rotation.z = currentRotationY;
+            arrow.position.copyFrom(currentPosition);
 
             const arrowMat = new BABYLON.StandardMaterial(`arrowMat-${i}`, scene);
             arrowMat.diffuseColor = new BABYLON.Color3(1, 0, 0);
-            arrowMat.emissiveColor = new BABYLON.Color3(0.4, 0, 0);
+            arrowMat.emissiveColor = new BABYLON.Color3(0.5, 0, 0);
             arrow.material = arrowMat;
 
             arrow.parent = parent;
+
+            const direction = new BABYLON.Vector3(
+                Math.sin(currentRotationY),
+                0,
+                Math.cos(currentRotationY)
+            );
+
+            currentPosition = currentPosition.add(direction.scale(stepDistance));
         }
 
         const destination = BABYLON.MeshBuilder.CreateBox(
@@ -216,29 +246,26 @@ const createScene = async function () {
             { size: 0.35 },
             scene
         );
-        destination.position.z = arrowCount * spacing;
+        destination.position.copyFrom(currentPosition);
         destination.position.y = 0.18;
 
         const destMat = new BABYLON.StandardMaterial("destMat", scene);
         destMat.diffuseColor = new BABYLON.Color3(0, 0, 1);
-        destMat.emissiveColor = new BABYLON.Color3(0, 0, 0.4);
+        destMat.emissiveColor = new BABYLON.Color3(0, 0, 0.5);
         destination.material = destMat;
         destination.parent = parent;
 
-        createRoomLabel(roomName, parent, destination.position.z);
-
-        return parent;
+        createRoomLabel(roomName, parent, currentPosition);
     }
 
-    // ROOM LABEL
-    function createRoomLabel(text, parent, zPos) {
+    /* ROOM LABEL */
+    function createRoomLabel(text, parent, pos) {
         const plane = BABYLON.MeshBuilder.CreatePlane(
             "textPlane",
             { width: 1.8, height: 0.6 },
             scene
         );
-        plane.position.z = zPos;
-        plane.position.y = 1.1;
+        plane.position = new BABYLON.Vector3(pos.x, 1.1, pos.z);
         plane.billboardMode = BABYLON.Mesh.BILLBOARDMODE_ALL;
         plane.parent = parent;
 
